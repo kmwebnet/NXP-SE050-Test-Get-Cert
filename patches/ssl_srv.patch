@@ -1,0 +1,135 @@
+1297c1297
+<         memcpy( ssl->cur_out_ctr + 2, ssl->in_ctr + 2, 6 );
+---
+>         memcpy( ssl->out_ctr + 2, ssl->in_ctr + 2, 6 );
+2387c2387
+<     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
+---
+>     if( ( ret = mbedtls_ssl_write_record( ssl, 1 ) ) != 0 )
+2389c2389
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
+---
+>         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
+2393,2401d2392
+< #if defined(MBEDTLS_SSL_PROTO_DTLS)
+<     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
+<         ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
+<     {
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flight_transmit", ret );
+<         return( ret );
+<     }
+< #endif /* MBEDTLS_SSL_PROTO_DTLS */
+< 
+2601,2606c2592,2593
+<     if ( mbedtls_ssl_ciphersuite_uses_ec(
+<          mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite ) ) )
+<     {
+<         ssl_write_supported_point_formats_ext( ssl, p + 2 + ext_len, &olen );
+<         ext_len += olen;
+<     }
+---
+>     ssl_write_supported_point_formats_ext( ssl, p + 2 + ext_len, &olen );
+>     ext_len += olen;
+2636c2623
+<     ret = mbedtls_ssl_write_handshake_msg( ssl );
+---
+>     ret = mbedtls_ssl_write_record( ssl, 1 );
+2831c2818
+<     ret = mbedtls_ssl_write_handshake_msg( ssl );
+---
+>     ret = mbedtls_ssl_write_record( ssl, 1 );
+3051,3052c3038,3039
+<         if( ( ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx,
+<                                         (*curve)->grp_id ) ) != 0 )
+---
+>         if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp,
+>                                        (*curve)->grp_id ) ) != 0 )
+3074,3075c3061
+<         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+<                                 MBEDTLS_DEBUG_ECDH_Q );
+---
+>         MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Q ", &ssl->handshake->ecdh_ctx.Q );
+3349c3335
+<     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
+---
+>     if( ( ret = mbedtls_ssl_write_record( ssl, 1 ) ) != 0 )
+3351c3337
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
+---
+>         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
+3376,3384c3362
+<     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
+<     {
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
+<         return( ret );
+<     }
+< 
+< #if defined(MBEDTLS_SSL_PROTO_DTLS)
+<     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
+<         ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
+---
+>     if( ( ret = mbedtls_ssl_write_record( ssl, 1 ) ) != 0 )
+3386c3364
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flight_transmit", ret );
+---
+>         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
+3389d3366
+< #endif /* MBEDTLS_SSL_PROTO_DTLS */
+3732c3709
+<     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+---
+>     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+3798,3799c3775
+<         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+<                                 MBEDTLS_DEBUG_ECDH_QP );
+---
+>         MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp ", &ssl->handshake->ecdh_ctx.Qp );
+3811,3812c3787
+<         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+<                                 MBEDTLS_DEBUG_ECDH_Z );
+---
+>         MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z  ", &ssl->handshake->ecdh_ctx.z );
+3925,3926c3900
+<         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+<                                 MBEDTLS_DEBUG_ECDH_QP );
+---
+>         MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp ", &ssl->handshake->ecdh_ctx.Qp );
+4045c4019,4034
+<     ret = mbedtls_ssl_read_record( ssl, 0 /* no checksum update */ );
+---
+>     do {
+> 
+>         do ret = mbedtls_ssl_read_record( ssl, 0 );
+>         while( ret == MBEDTLS_ERR_SSL_CONTINUE_PROCESSING );
+> 
+>         if( ret != 0 )
+>         {
+>             MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_read_record" ), ret );
+>             return( ret );
+>         }
+> 
+>         ret = mbedtls_ssl_handle_message_type( ssl );
+> 
+>     } while( MBEDTLS_ERR_SSL_NON_FATAL           == ret ||
+>              MBEDTLS_ERR_SSL_CONTINUE_PROCESSING == ret );
+> 
+4048c4037
+<         MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_read_record" ), ret );
+---
+>         MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_handle_message_type" ), ret );
+4237c4226
+<     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
+---
+>     if( ( ret = mbedtls_ssl_write_record( ssl, 1 ) ) != 0 )
+4239c4228
+<         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
+---
+>         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
+4268c4257
+<         if( ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
+---
+>         if( ( ret = mbedtls_ssl_resend( ssl ) ) != 0 )
+4271c4260
+< #endif /* MBEDTLS_SSL_PROTO_DTLS */
+---
+> #endif
